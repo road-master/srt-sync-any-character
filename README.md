@@ -58,7 +58,38 @@ AviUtl でカット編集後の mp4 ファイルに字幕を合成します:
 ffmpeg -i cut.mp4 -i sub_cut.srt -c copy -c:s mov_text -metadata:s:s:0 language=jpn subtitled.mp4
 ```
 
+## cut.py
+
+字幕付きの動画をキーフレームでカットするツールです ([avidemux] でカットすると字幕が失われるため)
+
+1\.  
+[VidCutter] で ts ファイルを開き、[TIME] を確認してメモします
+
+2\.  
+[avidemux] で ts ファイルを開き、カットしたい開始位置と終了位置のキーフレームの [時間] を確認してメモします
+
+3\.  
+カット元の ts ファイルを `original.ts` にリネームします
+
+4\.  
+次のコマンドで ts ファイルをカットします:
+
+```powershell
+python cut.py <VidCutter の [TIME]> <avidemux の開始位置キーフレームの [時間]> <avidemux の終了位置キーフレームの [時間]> <出力ファイル名>
+```
+
+例:
+
+```powershell
+python cut.py 00:00:00.572 00:00:05.505 00:29:44.282 cut.ts
+```
+
+- このとき、キーフレームでカットできていなければエラーが発生します
+- 終了位置は avidemux でカットした場合と同じ位置になることを確認していますが、キーフレームにはならないようです
+
 [SrtSync]: http://www2.wazoku.net/2sen/
 [DTV補完所]: http://www2.wazoku.net/2sen/
 [AviUtlプラグイン置き場]: https://aji0.web.fc2.com/
 [AviUtl]: http://spring-fragrance.mints.ne.jp/aviutl/
+[avidemux]: https://avidemux.sourceforge.net/
+[VidCutter]: https://github.com/ozmartian/vidcutter
