@@ -5,6 +5,7 @@ import subprocess
 from typing import Union
 
 from transportstreamarchiver.ffmpeg import SeekRange
+from transportstreamarchiver.ffmpeg.exceptions import FFmpegProcessError
 
 
 __all__ = ["cut", "export_subtitle", "import_subtitle"]
@@ -42,7 +43,7 @@ def cut(
         ]
     )
     if return_code != 0 or not file_output.exists():
-        raise Exception("Failed to cut")
+        raise FFmpegProcessError("Failed to cut")
 
 
 def export_subtitle(file_input: Path, file_output: Path) -> None:
@@ -59,7 +60,7 @@ def export_subtitle(file_input: Path, file_output: Path) -> None:
         ]
     )
     if return_code != 0 or not file_output.exists():
-        raise Exception("Failed to export subtitle")
+        raise FFmpegProcessError("Failed to export subtitle")
 
 
 def import_subtitle(ts: Path, subtitle: Path, output: Path) -> None:
@@ -81,7 +82,7 @@ def import_subtitle(ts: Path, subtitle: Path, output: Path) -> None:
         ]
     )
     if return_code != 0 or not output.exists():
-        raise Exception("Failed to import subtitle")
+        raise FFmpegProcessError("Failed to import subtitle")
 
 
 if __name__ == "__main__":

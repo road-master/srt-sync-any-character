@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 from transportstreamarchiver.ffmpeg import SeekRange
+from transportstreamarchiver.ffprobe.exceptions import FFprobeProcessError
 
 
 __all__ = ["is_cut_by_key_frame"]
@@ -35,7 +36,7 @@ def process_open(file_make_zero: Path, only_head: bool = None) -> subprocess.Pop
     )
 
 
-def is_cut_by_key_frame(file: Path) -> bool:
+def is_cut_by_key_frame(file: Path) -> None:
     list_is_key_frame: list[bool] = []
     process = process_open(file, only_head=True)
     while process.poll() is None:
@@ -46,12 +47,14 @@ def is_cut_by_key_frame(file: Path) -> bool:
         if len(split_line) <= 1 or split_line[1] == 'N/A':
             continue
         list_is_key_frame.append(re.search(',K', line))
-    if not (list_is_key_frame[0] and list_is_key_frame[15]):
-        return False
+    if not list_is_key_frame[0]:
+        raise FFprobeProcessError("First frame is not key frame")
     for i in range(1, 15):
         if list_is_key_frame[i]:
-            return False
-    return True
+            raise FFprobeProcessError("Interval between key frames is not 14 frames")
+    if not list_is_key_frame[15]:
+        raise FFprobeProcessError("Interval between key frames is not 14 frames")
+
 
 
 def get_list_key_frame(file_make_zero: Path) -> list[datetime]:
