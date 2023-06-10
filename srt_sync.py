@@ -1,3 +1,4 @@
+from contextlib import suppress
 from dataclasses import dataclass
 import subprocess
 import sys
@@ -24,16 +25,13 @@ def clear_file(file: str) -> Path:
 
 def load(file_sub: Path) -> Subs:
     subs = {}
-    try:
-        with file_sub.open(encoding="utf-8") as file:
-            while True:
-                line = next(file).strip()
-                if not line.isdigit():
-                    continue
-                index = int(line)
-                subs[index] = Sub(index, next(file), next(file))
-    except StopIteration:
-        pass
+    with suppress(StopIteration), file_sub.open(encoding="utf-8") as file:
+        while True:
+            line = next(file).strip()
+            if not line.isdigit():
+                continue
+            index = int(line)
+            subs[index] = Sub(index, next(file), next(file))
     return subs
 
 
