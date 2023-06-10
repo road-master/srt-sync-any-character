@@ -1,8 +1,10 @@
 from contextlib import suppress
 from dataclasses import dataclass
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+import textwrap
 from typing import Callable
 
 
@@ -49,14 +51,23 @@ def save(
 
 
 class SrtSync:
+    EXECUTABLE = "SrtSync"
+
     def __init__(self, file_input: Path) -> None:
         self.input = file_input
         self.output = clear_file(f"{self.input.stem}_new.srt")
+        if not shutil.which(self.EXECUTABLE):
+            msg = textwrap.dedent("""\
+                SrtSync not found.
+                Put SrtSync.exe into either of PATH in Windows (or same folder with this Python code).
+                If you don't have SrtSync.exe, download it from:
+                http://www2.wazoku.net/2sen/
+            """)
+            raise Exception(msg)
 
     def cut(self, remove_list: Path) -> Path:
-        executable = Path('SrtSync.exe').resolve()
         process = subprocess.Popen(
-            [executable, "-aviutldl", remove_list, self.input],
+            [self.EXECUTABLE, "-aviutldl", remove_list, self.input],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

@@ -56,7 +56,6 @@ def is_cut_by_key_frame(file: Path) -> None:
         raise FFprobeProcessError("Interval between key frames is not 14 frames")
 
 
-
 def get_list_key_frame(file_make_zero: Path) -> list[datetime]:
     list_key_frame: list[datetime] = []
     process = process_open(file_make_zero)

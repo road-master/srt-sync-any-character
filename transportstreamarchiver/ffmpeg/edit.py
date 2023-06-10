@@ -83,13 +83,3 @@ def import_subtitle(ts: Path, subtitle: Path, output: Path) -> None:
     )
     if return_code != 0 or not output.exists():
         raise FFmpegProcessError("Failed to import subtitle")
-
-
-if __name__ == "__main__":
-    cut(
-        Path("original.ts"),
-        sys.argv[1],
-        sys.argv[2],
-        sys.argv[3],
-        Path(sys.argv[4])
-    )
