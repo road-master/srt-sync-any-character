@@ -72,6 +72,28 @@ def get_list_key_frame(file_make_zero: Path) -> list[datetime]:
     return list_key_frame
 
 
+def print_frame(file_make_zero: Path) -> list[datetime]:
+    list_frame: list[datetime] = []
+    process = process_open(file_make_zero)
+    while process.poll() is None:
+        line = process.stdout.readline().strip()
+        split_line = line.split(',')
+        # May ['\r'] in case when .ts renamed from .m2ts
+        if len(split_line) <= 1 or split_line[1] == 'N/A':
+            continue
+        pts_time = split_line[1]
+        # if re.search(',K', line):
+        split_pts_time = pts_time.split('.')
+        list_frame.append(
+            {
+                "time": timedelta(seconds=int(split_pts_time[0]), microseconds=int(split_pts_time[1])),
+                "is_key": "K__" if re.search(',K', line) else "___",
+            }
+        )
+    for index, frame in enumerate(list_frame):
+        print(f"{index}: {frame['time']}, {frame['is_key']}")
+
+
 def get_delta_accurate(delta: timedelta, list_key_frame: list[datetime]) -> list[str]:
     delta_bisect_left = bisect_left(list_key_frame, delta)
     return [
