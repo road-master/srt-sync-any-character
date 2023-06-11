@@ -1,47 +1,46 @@
 from datetime import timedelta
 from pathlib import Path
-import sys
 import subprocess
-from typing import Union
+from typing import Optional, Union
 
 from transportstreamarchiver.ffmpeg import SeekRange
 from transportstreamarchiver.ffmpeg.exceptions import FFmpegProcessError
 
 
-__all__ = ["cut", "export_subtitle", "import_subtitle"]
+__all__ = ["cut", "compress", "export_subtitle", "import_subtitle"]
 
 
 def cut(
     file_input: Path,
     offset: Union[timedelta, str],
-    string_from: str,
-    string_to: str,
-    file_output: Path
+    file_output: Path,
+    *,
+    string_from: Optional[str] = None,
+    string_to: Optional[str] = None,
 ) -> None:
-    ffmpeg_seek_range = SeekRange(offset, string_from, string_to)
-    return_code = subprocess.call(
-        [
-            "ffmpeg",
-            "-ss",
-            f'{ffmpeg_seek_range.ss}',
-            "-to",
-            f'{ffmpeg_seek_range.to}',
-            "-i",
-            str(file_input),
-            "-map",
-            "0",
-            "-c",
-            "copy",
-            "-async",
-            "1",
-            "-strict",
-            "-2",
-            "-avoid_negative_ts",
-            "1",
-            "-y",
-            str(file_output),
-        ]
-    )
+    ffmpeg_seek_range = SeekRange(offset, string_from=string_from, string_to=string_to)
+    command = ["ffmpeg"]
+    if ffmpeg_seek_range.ss is not None:
+        command.extend(["-ss", f'{ffmpeg_seek_range.ss}'])
+    if ffmpeg_seek_range.to is not None:
+        command.extend(["-to", f'{ffmpeg_seek_range.to}'])
+    command.extend([
+        "-i",
+        str(file_input),
+        "-map",
+        "0",
+        "-c",
+        "copy",
+        "-async",
+        "1",
+        "-strict",
+        "-2",
+        "-avoid_negative_ts",
+        "1",
+        "-y",
+        str(file_output),
+    ])
+    return_code = subprocess.call(command)
     if return_code != 0 or not file_output.exists():
         raise FFmpegProcessError("Failed to cut")
 
