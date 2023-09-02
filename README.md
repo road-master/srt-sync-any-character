@@ -63,25 +63,38 @@ ffmpeg -i cut.mp4 -i sub_cut.srt -c copy -c:s mov_text -metadata:s:s:0 language=
 字幕付きの動画をキーフレームでカットするツールです ([avidemux] でカットすると字幕が失われるため)
 
 1\.  
-[VidCutter] で ts ファイルを開き、[TIME] を確認してメモします
+[MPV] をインストールします
+
+次のページにある圧縮ファイルをダウンロード:  
+[mpv player (Windows) download | SourceForge.net]
+
+解凍して .dll を次の場所に配置:
+
+- C:\Windows\System32
+- ~\bin
+- 他
 
 2\.  
-[avidemux] で ts ファイルを開き、カットしたい開始位置と終了位置のキーフレームの [時間] を確認してメモします
+[python-mpv] をインストールします:
+
+```powershell
+pip install mpv
+```
 
 3\.  
-カット元の ts ファイルを `original.ts` にリネームします
+[avidemux] で ts ファイルを開き、カットしたい開始位置と終了位置のキーフレームの [時間] を確認してメモします
 
 4\.  
 次のコマンドで ts ファイルをカットします:
 
 ```powershell
-python cut.py <VidCutter の [TIME]> <avidemux の開始位置キーフレームの [時間]> <avidemux の終了位置キーフレームの [時間]> <出力ファイル名>
+python cut.py <入力ファイル名> <出力ファイル名> <avidemux の開始位置キーフレームの [時間]> <avidemux の終了位置キーフレームの [時間]>
 ```
 
 例:
 
 ```powershell
-python cut.py 00:00:00.572 00:00:05.505 00:29:44.282 cut.ts
+python cut.py original.ts cut.ts 00:00:05.505 00:29:44.282
 ```
 
 - このとき、キーフレームでカットできていなければエラーが発生します
@@ -92,4 +105,6 @@ python cut.py 00:00:00.572 00:00:05.505 00:29:44.282 cut.ts
 [AviUtlプラグイン置き場]: https://aji0.web.fc2.com/
 [AviUtl]: http://spring-fragrance.mints.ne.jp/aviutl/
 [avidemux]: https://avidemux.sourceforge.net/
-[VidCutter]: https://github.com/ozmartian/vidcutter
+[MPV]: https://mpv.io/
+[mpv player (Windows) download | SourceForge.net]: https://sourceforge.net/projects/mpv-player-windows/
+[python-mpv]: https://pypi.org/project/mpv/
