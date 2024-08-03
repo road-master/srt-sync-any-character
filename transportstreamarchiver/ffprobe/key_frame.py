@@ -1,14 +1,11 @@
-from bisect import bisect_left
-from datetime import datetime, timedelta
-from pathlib import Path
 import re
 import subprocess
 import sys
+from bisect import bisect_left
+from datetime import datetime, timedelta
+from pathlib import Path
 
-from transportstreamarchiver.ffmpeg import SeekRange
 from transportstreamarchiver.ffprobe.exceptions import FFprobeProcessError
-
-
 __all__ = ["is_cut_by_key_frame"]
 
 

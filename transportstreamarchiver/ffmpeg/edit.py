@@ -1,24 +1,15 @@
-from datetime import timedelta
-from pathlib import Path
 import subprocess
-from typing import Optional, Union
+from pathlib import Path
 
 from transportstreamarchiver.ffmpeg import SeekRange
 from transportstreamarchiver.ffmpeg.exceptions import FFmpegProcessError
 
-
 __all__ = ["cut", "compress", "export_subtitle", "import_subtitle"]
 
 
-def cut(
-    file_input: Path,
-    offset: Union[timedelta, str],
-    file_output: Path,
-    *,
-    string_from: Optional[str] = None,
-    string_to: Optional[str] = None,
-) -> None:
-    ffmpeg_seek_range = SeekRange(offset, string_from=string_from, string_to=string_to)
+def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> None:
+    if not file_input.exists():
+        raise FileNotFoundError(f"{file_input} does not exist")
     command = ["ffmpeg"]
     if ffmpeg_seek_range.ss is not None:
         command.extend(["-ss", f'{ffmpeg_seek_range.ss}'])
@@ -40,6 +31,7 @@ def cut(
         "-y",
         str(file_output),
     ])
+    print(" ".join(command))
     return_code = subprocess.call(command)
     if return_code != 0 or not file_output.exists():
         raise FFmpegProcessError("Failed to cut")
@@ -47,13 +39,9 @@ def cut(
 
 def compress(
     file_input: Path,
-    offset: Union[timedelta, str],
+    ffmpeg_seek_range: SeekRange,
     file_output: Path,
-    *,
-    string_from: Optional[str] = None,
-    string_to: Optional[str] = None,
 ) -> None:
-    ffmpeg_seek_range = SeekRange(offset, string_from=string_from, string_to=string_to)
     # `-fix_sub_duration` requires to set before `-i` to load ARIB caption from input file.
     command = ["ffmpeg", "-fix_sub_duration", "-i", str(file_input)]
     # Requires to set after `-i`

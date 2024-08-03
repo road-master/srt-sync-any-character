@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Optional
+
 from transportstreamarchiver import ffmpeg
-from transportstreamarchiver.mpv.offset import OffsetChecker
+from transportstreamarchiver.ffmpeg.date_format import SeekRange
 
 
 def compress(
@@ -11,5 +12,5 @@ def compress(
     string_from: Optional[str] = None,
     string_to: Optional[str] = None,
 ) -> None:
-    offset = OffsetChecker(file_input).offset
-    ffmpeg.compress(file_input, offset, file_output, string_from=string_from, string_to=string_to)
+    ffmpeg_seek_range = SeekRange(file_input, string_from=string_from, string_to=string_to)
+    ffmpeg.compress(file_input, ffmpeg_seek_range, file_output)
