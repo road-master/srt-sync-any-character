@@ -16,10 +16,26 @@ def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> No
     if ffmpeg_seek_range.to is not None:
         command.extend(["-to", f'{ffmpeg_seek_range.to}'])
     command.extend([
+        # To prevent following error:
+        # [mpegts @ 000001f37d4fecc0] sample rate not set
+        # [out#0/mpegts @ 000001f37afaa840] Could not write header (incorrect codec parameters ?): Invalid argument
+        # Conversion failed!
+        #
+        # The broadcasted stream tends to be poor samples to analyze.
+        # - Answer: ffmpeg not copying audio from concatenated VOB files. Says sample rate not set - Super User
+        #   https://superuser.com/a/1609481
+        # - ffmpegのオプション -analyzeduration と -probesize - 脳内メモ＋＋
+        #   http://fftest33.blog.fc2.com/blog-entry-109.html
+        "-analyzeduration",
+        "100000G",
+        "-probesize",
+        "100000G",
         "-i",
         str(file_input),
         "-map",
         "0",
+        # "-map",
+        # "-0:a:1",
         "-c",
         "copy",
         "-async",
@@ -29,6 +45,8 @@ def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> No
         "-avoid_negative_ts",
         "1",
         "-y",
+        "-loglevel",
+        "verbose",
         str(file_output),
     ])
     print(" ".join(command))
