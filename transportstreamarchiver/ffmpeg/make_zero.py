@@ -1,11 +1,25 @@
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 
 def make_zero(file_input: Path) -> None:
     """Make the first timestamp of the video zero.
 
+    Note that video and audio streams don't seem to start with zero
+    due to the data stream seems to be always zero.
+        ffprobe -pretty -v error -select_streams d:0 -show_entries stream=start_pts,start_time \
+        <file.ts>
+        [PROGRAM]
+        [STREAM]
+        start_pts=0
+        start_time=0:00:00.000000
+        [/STREAM]
+        [/PROGRAM]
+        [STREAM]
+        start_pts=0
+        start_time=0:00:00.000000
+        [/STREAM]
     Args:
         file_input (Path): Path to the input video file.
     """
@@ -13,6 +27,10 @@ def make_zero(file_input: Path) -> None:
     return_code = subprocess.call(
         [
             "ffmpeg",
+            "-copyts",
+            "-start_at_zero",
+            "-avoid_negative_ts",
+            "make_zero",
             "-i",
             str(file_input),
             "-map",
@@ -23,8 +41,6 @@ def make_zero(file_input: Path) -> None:
             "0",
             "-muxdelay",
             "0",
-            "-avoid_negative_ts",
-            "make_zero",
             "-y",
             str(file_make_zero),
         ]
