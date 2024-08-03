@@ -23,7 +23,7 @@ def make_zero(file_input: Path) -> None:
     Args:
         file_input (Path): Path to the input video file.
     """
-    file_make_zero = Path(f"{file_input.stem}_make_zero.ts")
+    file_make_zero = file_input.parent / Path(f"{file_input.stem}_make_zero.ts")
     return_code = subprocess.call(
         [
             "ffmpeg",
