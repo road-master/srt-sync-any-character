@@ -1,9 +1,10 @@
 import subprocess
-import sys
 from pathlib import Path
 
+from transportstreamarchiver.ffmpeg.date_format import SeekRange
 
-def make_zero(file_input: Path) -> None:
+
+def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
     """Make the first timestamp of the video zero.
 
     Note that video and audio streams don't seem to start with zero
@@ -24,29 +25,28 @@ def make_zero(file_input: Path) -> None:
         file_input (Path): Path to the input video file.
     """
     file_make_zero = file_input.parent / Path(f"{file_input.stem}_make_zero.ts")
-    return_code = subprocess.call(
-        [
-            "ffmpeg",
-            "-copyts",
-            "-start_at_zero",
-            "-avoid_negative_ts",
-            "make_zero",
-            "-i",
-            str(file_input),
-            "-map",
-            "0",
-            "-c",
-            "copy",
-            "-muxpreload",
-            "0",
-            "-muxdelay",
-            "0",
-            "-y",
-            str(file_make_zero),
-        ]
-    )
-
-
-if __name__ == "__main__":
-    file_input = Path(sys.argv[1])
-    make_zero(file_input)
+    command = ["ffmpeg"]
+    if ffmpeg_seek_range.ss is not None:
+        command.extend(["-ss", f'{ffmpeg_seek_range.ss}'])
+    if ffmpeg_seek_range.to is not None:
+        command.extend(["-to", f'{ffmpeg_seek_range.to}'])
+    command.extend([
+        "-copyts",
+        "-start_at_zero",
+        "-avoid_negative_ts",
+        "make_zero",
+        "-i",
+        str(file_input),
+        "-map",
+        "0",
+        "-c",
+        "copy",
+        "-muxpreload",
+        "0",
+        "-muxdelay",
+        "0",
+        "-y",
+        str(file_make_zero),
+    ])
+    subprocess.call(command)
+    return file_make_zero

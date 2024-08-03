@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from transportstreamarchiver.mpv.offset import OffsetChecker
+from transportstreamarchiver.offset import OffsetChecker
 
 __all__ = ["SeekRange"]
 
@@ -16,20 +16,17 @@ class SeekRange:
         *,
         string_from: Optional[str] = None,
         string_to: Optional[str] = None,
+        delta_offset: Optional[timedelta] = None,
     ) -> None:
         self.datetime_zero = datetime.strptime("00:00:00.000", DATE_FORMAT)
-        self.delta_offset = self.get_delta_offset(file_input)
+        self.delta_offset = delta_offset if delta_offset else self.get_delta_offset(file_input)
         self.ss = self.string_to_timedelta(string_from)
         self.to = self.string_to_timedelta(string_to)
 
     def get_delta_offset(self, file_input: Path) -> timedelta:
         if not file_input.exists():
             raise FileNotFoundError(f"{file_input} does not exist")
-        offset = OffsetChecker(file_input).offset
-        if isinstance(offset, timedelta):
-            return offset
-        datetime_offset = datetime.strptime(offset, DATE_FORMAT)
-        return datetime_offset - self.datetime_zero
+        return OffsetChecker(file_input).offset
 
     def string_to_timedelta(self, time_string: Optional[str]) -> Optional[timedelta]:
         if time_string is None:

@@ -2,10 +2,12 @@ import re
 import subprocess
 import sys
 from bisect import bisect_left
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from transportstreamarchiver.ffprobe.exceptions import FFprobeProcessError
+
 __all__ = ["is_cut_by_key_frame"]
 
 
@@ -69,8 +71,14 @@ def get_list_key_frame(file_make_zero: Path) -> list[datetime]:
     return list_key_frame
 
 
-def print_frame(file_make_zero: Path) -> list[datetime]:
-    list_frame: list[datetime] = []
+@dataclass
+class PresentationTimeStamp:
+    time: timedelta
+    is_key: str
+
+
+def inspect_frame(file_make_zero: Path) -> list[PresentationTimeStamp]:
+    list_frame: list[PresentationTimeStamp] = []
     process = process_open(file_make_zero)
     while process.poll() is None:
         line = process.stdout.readline().strip()
@@ -82,12 +90,16 @@ def print_frame(file_make_zero: Path) -> list[datetime]:
         # if re.search(',K', line):
         split_pts_time = pts_time.split('.')
         list_frame.append(
-            {
-                "time": timedelta(seconds=int(split_pts_time[0]), microseconds=int(split_pts_time[1])),
-                "is_key": "K__" if re.search(',K', line) else "___",
-            }
+            PresentationTimeStamp(
+                time=timedelta(seconds=int(split_pts_time[0]), microseconds=int(split_pts_time[1])),
+                is_key="K__" if re.search(',K', line) else "___",
+            )
         )
-    for index, frame in enumerate(list_frame):
+    return list_frame
+
+
+def print_frame(file_make_zero: Path) -> list[datetime]:
+    for index, frame in enumerate(inspect_frame(file_make_zero)):
         print(f"{index}: {frame['time']}, {frame['is_key']}")
 
 
