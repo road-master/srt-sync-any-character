@@ -1,0 +1,6 @@
+path: <Path to directory of movie file>
+name: <Movie file name>
+cut:
+  - name: <Suffix of cut movie file>
+    from: <HH:MM:SS.MMM>
+    to: <HH:MM:SS.MMM>
