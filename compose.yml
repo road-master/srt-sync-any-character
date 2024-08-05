@@ -1,0 +1,6 @@
+services:
+  transport-stream-archiver:
+    build: .
+    image: mstmelody/transport-stream-archiver:development
+    volumes:
+      - .:/workspace
