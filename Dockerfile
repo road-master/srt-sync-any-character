@@ -4,6 +4,8 @@ RUN curl -SL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmp
     | tar -xJC /tmp
 RUN mv /tmp/ffmpeg-master-latest-linux64-lgpl/bin/* /usr/local/bin
 RUN pip install pipenv
+# see: https://pythonspeed.com/articles/activate-virtualenv-dockerfile/
+ENV PIPENV_VENV_IN_PROJECT=1
 RUN mkdir /workspace
 WORKDIR /workspace
 COPY Pipfile Pipfile.lock /workspace/
