@@ -2,7 +2,7 @@ from datetime import timedelta
 from logging import getLogger
 from pathlib import Path
 
-from transportstreamarchiver.ffmpeg.date_format import SeekRange
+from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 from transportstreamarchiver.ffmpeg.make_zero import make_zero
 from transportstreamarchiver.ffprobe.key_frame import inspect_frame
 
@@ -28,8 +28,7 @@ class OffsetChecker:
 
     def copy_only_beginning_with_making_zero(self) -> None:
         ffmpeg_seek_range = SeekRange(
-            self.file,
-            string_to="00:00:01.000",
             delta_offset=timedelta(days=0, seconds=0, microseconds=0),
+            string_to="00:00:01.000",
         )
         make_zero(self.file, ffmpeg_seek_range)

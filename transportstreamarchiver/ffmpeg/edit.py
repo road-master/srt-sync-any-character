@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from transportstreamarchiver.ffmpeg import SeekRange
+from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 from transportstreamarchiver.ffmpeg.exceptions import FFmpegProcessError
 
 __all__ = ["cut", "compress", "export_subtitle", "import_subtitle"]

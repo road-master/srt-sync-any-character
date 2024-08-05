@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from transportstreamarchiver.ffmpeg.date_format import SeekRange
+from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 
 
 def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
