@@ -1,8 +1,6 @@
 from pathlib import Path
 
-# Reason: Using subprocess is necessary to call FFmpeg.
-import subprocess  # nosec: B404
-
+from transportstreamarchiver.ffmpeg.execution import execute_ffmpeg
 from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 
 
@@ -27,12 +25,12 @@ def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
         file_input (Path): Path to the input video file.
     """
     file_make_zero = file_input.parent / Path(f"{file_input.stem}_make_zero.ts")
-    command = ["ffmpeg"]
+    parameters = []
     if ffmpeg_seek_range.ss is not None:
-        command.extend(["-ss", f"{ffmpeg_seek_range.ss}"])
+        parameters.extend(["-ss", f"{ffmpeg_seek_range.ss}"])
     if ffmpeg_seek_range.to is not None:
-        command.extend(["-to", f"{ffmpeg_seek_range.to}"])
-    command.extend(
+        parameters.extend(["-to", f"{ffmpeg_seek_range.to}"])
+    parameters.extend(
         [
             "-copyts",
             "-start_at_zero",
@@ -52,6 +50,5 @@ def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
             str(file_make_zero),
         ],
     )
-    # Reason: Confirmed that command isn't so risky.
-    subprocess.call(command)  # noqa: S603  # nosec: B603
+    execute_ffmpeg(parameters, "Failed to make zero", file_make_zero)
     return file_make_zero
