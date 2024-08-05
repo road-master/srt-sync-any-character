@@ -3,7 +3,6 @@ import sys
 
 from transportstreamarchiver.sync_sub import sync_sub
 
-
 if __name__ == "__main__":
     ts_original = Path(sys.argv[1])
     remove_list = Path(sys.argv[2])

@@ -2,8 +2,8 @@ from datetime import timedelta
 from logging import getLogger
 from pathlib import Path
 
-from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 from transportstreamarchiver.ffmpeg.make_zero import make_zero
+from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 from transportstreamarchiver.ffprobe.key_frame import inspect_frame
 
 
@@ -19,7 +19,8 @@ class OffsetChecker:
 
     def get_offset(self) -> timedelta:
         if not self.file.exists():
-            raise FileNotFoundError(f"{self.file} does not exist")
+            msg = f"{self.file} does not exist"
+            raise FileNotFoundError(msg)
         self.copy_only_beginning_with_making_zero()
         file_make_zero = self.file.parent / Path(f"{self.file.stem}_make_zero.ts")
         list_frame = inspect_frame(file_make_zero)

@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from transportstreamarchiver.offset import OffsetChecker
 from transportstreamarchiver.mpv.offset import OffsetChecker as MpvOffsetChecker
+from transportstreamarchiver.offset import OffsetChecker
 
 
 @pytest.mark.skip(reason="Since it's difficult to prepare copyright free MPEG ts file.")

@@ -1,5 +1,7 @@
-import subprocess
 from pathlib import Path
+
+# Reason: Using subprocess is necessary to call FFmpeg.
+import subprocess  # nosec: B404
 
 from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 
@@ -27,26 +29,29 @@ def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
     file_make_zero = file_input.parent / Path(f"{file_input.stem}_make_zero.ts")
     command = ["ffmpeg"]
     if ffmpeg_seek_range.ss is not None:
-        command.extend(["-ss", f'{ffmpeg_seek_range.ss}'])
+        command.extend(["-ss", f"{ffmpeg_seek_range.ss}"])
     if ffmpeg_seek_range.to is not None:
-        command.extend(["-to", f'{ffmpeg_seek_range.to}'])
-    command.extend([
-        "-copyts",
-        "-start_at_zero",
-        "-avoid_negative_ts",
-        "make_zero",
-        "-i",
-        str(file_input),
-        "-map",
-        "0",
-        "-c",
-        "copy",
-        "-muxpreload",
-        "0",
-        "-muxdelay",
-        "0",
-        "-y",
-        str(file_make_zero),
-    ])
-    subprocess.call(command)
+        command.extend(["-to", f"{ffmpeg_seek_range.to}"])
+    command.extend(
+        [
+            "-copyts",
+            "-start_at_zero",
+            "-avoid_negative_ts",
+            "make_zero",
+            "-i",
+            str(file_input),
+            "-map",
+            "0",
+            "-c",
+            "copy",
+            "-muxpreload",
+            "0",
+            "-muxdelay",
+            "0",
+            "-y",
+            str(file_make_zero),
+        ],
+    )
+    # Reason: Confirmed that command isn't so risky.
+    subprocess.call(command)  # noqa: S603  # nosec: B603
     return file_make_zero

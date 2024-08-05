@@ -15,5 +15,6 @@ class SeekRangeFactory:
     @staticmethod
     def get_delta_offset(file_input: Path) -> timedelta:
         if not file_input.exists():
-            raise FileNotFoundError(f"{file_input} does not exist")
+            msg = f"{file_input} does not exist"
+            raise FileNotFoundError(msg)
         return OffsetChecker(file_input).offset

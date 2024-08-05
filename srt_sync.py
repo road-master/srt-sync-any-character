@@ -1,11 +1,27 @@
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
-import shutil
-import subprocess
-import sys
+from logging import getLogger
 from pathlib import Path
+import shutil
+
+# Reason: Using subprocess is necessary to call SrtSync.exe.
+import subprocess  # nosec: B404
+import sys
 import textwrap
-from typing import Callable
+
+logger = getLogger(__name__)
+
+
+class Error(Exception):
+    """Base class for exceptions in this module.
+
+    @see https://docs.python.org/3/tutorial/errors.html#user-defined-exceptions
+    """
+
+
+class SrtSyncError(Error):
+    """SrtSync failed."""
 
 
 @dataclass
@@ -37,11 +53,7 @@ def load(file_sub: Path) -> Subs:
     return subs
 
 
-def save(
-    file_path: Path,
-    subs: Subs,
-    what_write_to_text: Callable[[Sub], str],
-) -> None:
+def save(file_path: Path, subs: Subs, what_write_to_text: Callable[[Sub], str]) -> None:
     with file_path.open("w", encoding="utf-8") as file:
         for sub in subs.values():
             file.write(str(sub.index) + "\n")
@@ -57,16 +69,19 @@ class SrtSync:
         self.input = file_input
         self.output = clear_file(f"{self.input.stem}_new.srt")
         if not shutil.which(self.EXECUTABLE):
-            msg = textwrap.dedent("""\
+            msg = textwrap.dedent(
+                """\
                 SrtSync not found.
                 Put SrtSync.exe into either of PATH in Windows (or same folder with this Python code).
                 If you don't have SrtSync.exe, download it from:
                 http://www2.wazoku.net/2sen/
-            """)
-            raise Exception(msg)
+            """,
+            )
+            raise SrtSyncError(msg)
 
     def cut(self, remove_list: Path) -> Path:
-        process = subprocess.Popen(
+        # Reason: Confirmed that command isn't so risky.
+        process = subprocess.Popen(  # noqa: S603  # nosec: B603
             [self.EXECUTABLE, "-aviutldl", remove_list, self.input],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -74,12 +89,15 @@ class SrtSync:
             text=True,
         )
         while process.poll() is None:
-            line = process.stdout.readline().strip()
-            print(line)
-            if line.startswith('続行するには何かキーを押してください'):
-                process.communicate('\r\n')
+            # Reason: The condition `process.poll() is None` guarantees that `process.stdout` is not None.
+            line: str = process.stdout.readline()  # type: ignore[union-attr]
+            stripped_line = line.strip()
+            logger.debug(stripped_line)
+            if stripped_line.startswith("続行するには何かキーを押してください"):
+                process.communicate("\r\n")
         if not self.output.exists():
-            raise Exception("Failed to cut")
+            msg = "Failed to cut"
+            raise SrtSyncError(msg)
         return self.output
 
 
@@ -102,14 +120,8 @@ class SrtSyncWrapper:
         file_sub_cut_fixed = clear_file(f"{file_sub_original.stem}_cut.srt")
         subs_cut = load(file_sub_cut)
         subs_original = load(file_sub_original)
-        save(
-            file_sub_cut_fixed,
-            subs_cut,
-            lambda sub: subs_original[int(sub.text.replace("\\", ""))].text
-        )
+        save(file_sub_cut_fixed, subs_cut, lambda sub: subs_original[int(sub.text.replace("\\", ""))].text)
 
 
 if __name__ == "__main__":
-    remove_list = Path(sys.argv[1])
-    sub_original = Path(sys.argv[2])
-    SrtSyncWrapper.process(sub_original, remove_list)
+    SrtSyncWrapper.process(Path(sys.argv[2]), Path(sys.argv[1]))
