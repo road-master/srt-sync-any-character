@@ -58,6 +58,33 @@ AviUtl でカット編集後の mp4 ファイルに字幕を合成します:
 ffmpeg -i cut.mp4 -i sub_cut.srt -c copy -c:s mov_text -metadata:s:s:0 language=jpn subtitled.mp4
 ```
 
+## sync_sub.py
+
+`str_sync.py` を使う工程を一つにまとめたツールです
+
+1\.
+
+このリポジトリーを clone します:
+
+```powershell
+git clone https://github.com/road-master/srt-sync-any-character.git
+```
+
+2\.  
+AviUtl でカット編集します
+
+3\.  
+AviUtl から削除リストをエクスポートします:
+
+[ファイル] -> [エクスポート] -> [削除リスト]
+
+4\.  
+削除リストと字幕を sync_sub.py に渡します:
+
+```powershell
+python sync_sub.py original.ts remove_list.txt cut.mp4 subtitled.mp4
+```
+
 ## cut.py
 
 字幕付きの動画をキーフレームでカットするツールです ([avidemux] でカットすると字幕が失われるため)
