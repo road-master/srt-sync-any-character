@@ -1,33 +1,51 @@
 from bisect import bisect_left
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from logging import getLogger
+from logging import DEBUG, getLogger, INFO
 from pathlib import Path
 import re
 
 # Reason: Using subprocess is necessary to call FFprobe.
-import subprocess  # nosec: B404
+import subprocess
+from typing import Generic, TypeVar  # nosec: B404
 
-from transportstreamarchiver.ffprobe.exceptions import FFprobeProcessError
+from transportstreamarchiver.ffprobe.duration import get_duration
+from transportstreamarchiver.ffprobe.exceptions import FFprobeProcessError, SkipFrame
 
-__all__ = ["is_cut_by_key_frame"]
+__all__ = ["is_cut_by_key_frame_at_start", "is_cut_by_key_frame_at_end"]
 
 logger = getLogger(__name__)
 
 
-def process_open(file_make_zero: Path, *, only_head: bool = False) -> subprocess.Popen[str]:
+def process_open(
+    file_make_zero: Path,
+    *,
+    only_head: bool | None = None,
+    entries: str | None = None,
+) -> subprocess.Popen[str]:
+    """Run FFprobe process.
+
+    Args:
+        file_make_zero: File path.
+        only_head: If True, read only the first 16 frames.
+    """
     args = [
         "-hide_banner",
         "-select_streams",
         "v",
         "-show_entries",
-        "packet=pts_time,flags",
-        "-of",
+        entries if entries else "packet=pts_time,flags",
+        "-output_format",
         "csv",
     ]
-    if only_head:
+    if only_head is True:
         args.append("-read_intervals")
         args.append("%+#16")
+    elif only_head is False:
+        duration = get_duration(file_make_zero) - 0.7
+        args.append("-read_intervals")
+        args.append(str(duration))
     command = ["ffprobe", *args, str(file_make_zero)]
     logger.debug(" ".join(command))
     # Reason: Confirmed that command isn't so risky.
@@ -40,31 +58,121 @@ def process_open(file_make_zero: Path, *, only_head: bool = False) -> subprocess
     )
 
 
-def create_list_is_key_frame(file: Path) -> list[bool]:
-    list_is_key_frame: list[bool] = []
-    process = process_open(file, only_head=True)
-    while process.poll() is None:
-        # Reason: The condition `process.poll() is None` guarantees that `process.stdout` is not None.
-        line: str = process.stdout.readline()  # type: ignore[union-attr]
-        stripped_line = line.strip()
-        split_line = line.split(",")
+T = TypeVar("T")
+
+
+class Inspector(Generic[T]):
+    def __init__(
+        self,
+        inspect_line: Callable[[str], T],
+        *,
+        log_level: int = DEBUG,
+        entries: str | None = None,
+    ) -> None:
+        self.logger = getLogger(__name__)
+        self.inspect_line = inspect_line
+        self.log_level = log_level
+        self.entries = entries
+        self.list_something: list[T] = []
+
+    def inspect(self, file_make_zero: Path, *, only_head: bool | None = None) -> list[T]:
+        with process_open(file_make_zero, only_head=only_head, entries=self.entries) as process:
+            while process.poll() is None:
+                # Reason: The condition `process.poll() is None` guarantees that `process.stdout` is not None.
+                line: str = process.stdout.readline()  # type: ignore[union-attr]
+                stripped_line = line.strip()
+                logger.log(self.log_level, stripped_line)
+                try:
+                    something = self.inspect_line(stripped_line)
+                except SkipFrame:
+                    continue
+                self.list_something.append(something)
+        return self.list_something
+
+
+def create_list_key_frame(file_make_zero: Path) -> list[str]:
+    def inspect_key_frame(stripped_line: str) -> str:
+        split_line = stripped_line.split(",")
         # May ['\r'] in case when .ts renamed from .m2ts
         if len(split_line) <= 1 or split_line[1] == "N/A":
-            continue
-        list_is_key_frame.append(bool(re.search(",K", stripped_line)))
-    return list_is_key_frame
+            raise SkipFrame
+        if re.search(",K", stripped_line):
+            return stripped_line.split(",")[1]
+        raise SkipFrame
+
+    return Inspector(inspect_key_frame).inspect(file_make_zero)
 
 
-def is_cut_by_key_frame(file: Path) -> None:
-    list_is_key_frame = create_list_is_key_frame(file)
-    if not list_is_key_frame[0]:
+def inspect_is_key_frame(stripped_line: str) -> tuple[str, bool]:
+    split_line = stripped_line.split(",")
+    try:
+        pts_time = split_line[1]
+    except IndexError:
+        raise SkipFrame
+    is_key_frame = split_line[2] == "K__"
+    return (pts_time, is_key_frame)
+
+
+def reorganize_key_frame(list_line: list[list[str]]) -> dict[str, list[str]]:
+    dictionary_frame: dict[str, list[str]] = {}
+    try:
+        for each_line in list_line:
+            print(each_line)
+            # kind = each_line[0]
+            pts_time = each_line[1]
+            if pts_time in dictionary_frame:
+                dictionary_frame[each_line[1]].append(each_line[2])
+            else:
+                dictionary_frame[each_line[1]] = [each_line[2]]
+            # if kind == "packet":
+            # elif kind == "frame":
+            #     dictionary_frame[each_line[1]] = [each_line[2]]
+            # else:
+            #     raise ValueError(f"Unknown kind: {kind}")
+    except IndexError:
+        logger.exception("IndexError")
+        pass
+    for key, value in dictionary_frame.items():
+        print(key, value)
+    return dictionary_frame
+
+
+ENTRIES_PACKET_AND_FRAME = "packet=pts_time,flags:frame=pts_time,pict_type"
+
+
+def is_cut_by_key_frame_at_start(file: Path) -> None:
+    inspector = Inspector(inspect_is_key_frame, log_level=INFO)
+    list_is_key_frame = inspector.inspect(file, only_head=True)
+    if not list_is_key_frame[0][1]:
         msg = "First frame is not key frame"
         raise FFprobeProcessError(msg)
-    for i in range(1, 15):
-        if list_is_key_frame[i]:
+    for index in range(1, 15):
+        if list_is_key_frame[index][1]:
             msg = "Interval between key frames is not 14 frames"
             raise FFprobeProcessError(msg)
-    if not list_is_key_frame[15]:
+    if not list_is_key_frame[15][1]:
+        msg = "Interval between key frames is not 14 frames"
+        raise FFprobeProcessError(msg)
+
+
+def is_cut_by_key_frame_at_end(file: Path) -> None:
+    inspector = Inspector(inspect_is_key_frame, log_level=INFO)
+    list_is_key_frame = inspector.inspect(file, only_head=False)
+    for index_last_key_frame in range(1, 15):
+        if list_is_key_frame[-index_last_key_frame][1]:
+            break
+    else:
+        msg = "Key frame is not found in last 15 frames"
+        raise FFprobeProcessError(msg)
+    for index in range(1, index_last_key_frame):
+        if list_is_key_frame[-(index)][0] > list_is_key_frame[-index_last_key_frame][0]:
+            msg = "The PTS time of following frame after last key frame is later than last key frame"
+            raise FFprobeProcessError(msg)
+    for index in range(1, 15):
+        if list_is_key_frame[-(index + index_last_key_frame)][1]:
+            msg = "Interval between key frames is not 14 frames"
+            raise FFprobeProcessError(msg)
+    if not list_is_key_frame[-(15 + index_last_key_frame)][1]:
         msg = "Interval between key frames is not 14 frames"
         raise FFprobeProcessError(msg)
 

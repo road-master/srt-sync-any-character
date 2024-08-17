@@ -36,22 +36,40 @@ def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> No
             "100000G",
             "-i",
             str(file_input),
+            # In default, only one stream is selected for each type and the rest of the streams are removed.
             "-map",
             "0",
+            # In case when recorded video around the time when switch audio track
+            # from single audio track to the one with sub audio,
+            # the audio track may be handled as invalid track.
+            # To remove useless track, set the following option:
             # "-map",
             # "-0:a:1",  # noqa: ERA001
             "-c",
             "copy",
+            # To fix gap between video and audio track if they are not synchronized.
             "-async",
             "1",
+            # (Just in case) To prepare in case when need to use experimental features
             "-strict",
-            "-2",
+            "experimental",
+            # To fix timestamp in case when the video starts from negative timestamp.
             "-avoid_negative_ts",
-            "1",
+            "make_non_negative",
             "-y",
             "-loglevel",
             "verbose",
             str(file_output),
+            # The option `-copyts` is not used intentionally since `-copyts` has side effect
+            # to
+            # - ffmpeg Documentation
+            #   https://www.ffmpeg.org/ffmpeg-all.html
+            # > -dts_delta_threshold threshold
+            # > The timestamp discontinuity correction ... is automatically disabled
+            # > when employing the -copyts option (unless wrapping is detected).
+            # > If a timestamp discontinuity is detected whose absolute value is greater than threshold,
+            # > ffmpeg will remove the discontinuity by decreasing/increasing the current DTS and PTS
+            # > by the corresponding delta value.
         ],
     )
     execute_ffmpeg(parameters, "Failed to cut", file_output)

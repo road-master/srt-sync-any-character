@@ -12,3 +12,8 @@ class Error(Exception):
 
 class FFprobeProcessError(Error):
     """FFprobe process failed."""
+
+
+# Reason: This class is not for presenting error.
+class SkipFrame(Error):  # noqa: N818
+    """Skip frame."""

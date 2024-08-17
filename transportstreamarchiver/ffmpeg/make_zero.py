@@ -4,7 +4,7 @@ from transportstreamarchiver.ffmpeg.execution import execute_ffmpeg
 from transportstreamarchiver.ffmpeg.seek_range import SeekRange
 
 
-def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
+def make_zero(file_input: Path, seek_range: SeekRange) -> Path:
     """Make the first timestamp of the video zero.
 
     Note that video and audio streams don't seem to start with zero
@@ -26,10 +26,10 @@ def make_zero(file_input: Path, ffmpeg_seek_range: SeekRange) -> Path:
     """
     file_make_zero = file_input.parent / Path(f"{file_input.stem}_make_zero.ts")
     parameters = []
-    if ffmpeg_seek_range.ss is not None:
-        parameters.extend(["-ss", f"{ffmpeg_seek_range.ss}"])
-    if ffmpeg_seek_range.to is not None:
-        parameters.extend(["-to", f"{ffmpeg_seek_range.to}"])
+    if seek_range.ss is not None:
+        parameters.extend(["-ss", f"{seek_range.ss}"])
+    if seek_range.to is not None:
+        parameters.extend(["-to", f"{seek_range.to}"])
     parameters.extend(
         [
             "-copyts",

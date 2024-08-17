@@ -14,4 +14,4 @@ def cut(
 ) -> None:
     ffmpeg_seek_range = SeekRangeFactory.create(file_input, string_from=string_from, string_to=string_to)
     ffmpeg.cut(file_input, ffmpeg_seek_range, file_output)
-    ffprobe.is_cut_by_key_frame(file_output)
+    ffprobe.is_cut_by_key_frame_at_start(file_output)
