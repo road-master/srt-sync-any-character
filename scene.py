@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import ffmpeg
@@ -9,10 +9,12 @@ import ffmpeg
 if TYPE_CHECKING:
     from ffmpeg.nodes import FilterableStream, OutputStream
 
+SCENE_DEFAULT = "0.1"
 
-def extract_scene(file_input: Path) -> str:
+
+def extract_scene(file_input: Path, *, scene: str = SCENE_DEFAULT) -> str:
     stream_input: FilterableStream = ffmpeg.input(file_input)
-    stream_filter_1: FilterableStream = ffmpeg.filter(stream_input, "select", "gt(scene,0.1)")
+    stream_filter_1: FilterableStream = ffmpeg.filter(stream_input, "select", f"gt(scene,{scene})")
     stream_filter_2: FilterableStream = ffmpeg.filter(stream_filter_1, "scale", width=640, height=360)
     # To output the frame number and timestamp
     stream_filter_3: FilterableStream = ffmpeg.filter(stream_filter_2, "showinfo")
@@ -38,7 +40,8 @@ def getTimes(stderr: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    stderr = extract_scene(Path(sys.argv[1]))
+    scene = sys.argv[2] if len(sys.argv) >= 3 else SCENE_DEFAULT
+    stderr = extract_scene(Path(sys.argv[1]), scene=scene)
     Path("output/std_err.txt").write_text(stderr, encoding="utf-8")
     print(stderr)
     list_time = ["0"]
