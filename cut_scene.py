@@ -70,10 +70,18 @@ def create_list_period(
 ) -> Generator[SeekRange, None, None]:
     for period in list_consecutive_period:
         print(period)
-        yield SeekRange(list_time[period.ss], list_time[period.to + 2])
+        # Why +2:
+        # Because, at least video has to include until the start of next scene.
+        # And, when just only take next scene, FFmpeg would take the key frame before the start of next scene.
+        yield SeekRange(list_time[period.ss], list_time[period.to + 1])
 
 
 class Frames:
+    # The gap between the FFprobe's PTS_TIME and FFmpeg's -ss option position.
+    # Because, FFmpeg would take the key frame before the end of the scene.
+    # Following value is based on experience in research with actual video.
+    INDEX_GAP_BETWEEN_FFPROBE_AND_FFMPEG = 2
+
     def __init__(self, file_make_zero: Path) -> None:
         self.file_make_zero = file_make_zero
         self.list_frame = create_list_key_frame(file_make_zero)
@@ -95,7 +103,7 @@ class Frames:
         threshold = float(time)
         for index, frame in enumerate(reversed(self.list_frame)):
             if float(frame) <= threshold:
-                return self.list_frame[-index]
+                return self.list_frame[min(-(index + 1) + self.INDEX_GAP_BETWEEN_FFPROBE_AND_FFMPEG, -1)]
         return self.list_frame[0]
 
 
@@ -117,7 +125,7 @@ if __name__ == "__main__":
     print(seek_ranges)
     for index, seek_range in enumerate(seek_ranges):
         print(seek_range)
-        file_output = Path(f"{file_input.stem}-{index}{file_input.suffix}")
+        file_output = Path(f"{file_input.stem}-{index + 1}{file_input.suffix}")
         cut(file_input, seek_range, file_output)
         ffprobe.is_cut_by_key_frame_at_start(file_output)
         ffprobe.is_cut_by_key_frame_at_end(file_output)
