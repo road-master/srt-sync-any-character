@@ -1,7 +1,7 @@
 import json
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import ffmpeg
@@ -10,6 +10,25 @@ if TYPE_CHECKING:
     from ffmpeg.nodes import FilterableStream, OutputStream
 
 SCENE_DEFAULT = "0.1"
+
+
+def extract_first_scene(file_input: Path) -> None:
+    """Extract the first scene of the video.
+
+    ffmpeg -i <file_imput> -vframes 1 -f image2 /output/%06d.jpg
+    """
+    stream_input: FilterableStream = ffmpeg.input(file_input)
+    stream_filter: FilterableStream = ffmpeg.filter(stream_input, "scale", width=640, height=360)
+    stream_output: OutputStream = ffmpeg.output(
+        stream_filter,
+        "output/%06d.jpg",
+        start_number=0,
+        vframes=1,
+        f="image2",
+        hide_banner=None,
+    )
+    bytes_stdout, _ = ffmpeg.run(stream_output, capture_stdout=True)
+    print(bytes_stdout.decode("utf-8", errors="ignore"))
 
 
 def extract_scene(file_input: Path, *, scene: str = SCENE_DEFAULT) -> str:
@@ -40,8 +59,10 @@ def getTimes(stderr: str) -> list[str]:
 
 
 if __name__ == "__main__":
+    file_input = Path(sys.argv[1])
     scene = sys.argv[2] if len(sys.argv) >= 3 else SCENE_DEFAULT
-    stderr = extract_scene(Path(sys.argv[1]), scene=scene)
+    extract_first_scene(file_input)
+    stderr = extract_scene(file_input, scene=scene)
     Path("output/std_err.txt").write_text(stderr, encoding="utf-8")
     print(stderr)
     list_time = ["0"]
