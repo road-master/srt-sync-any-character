@@ -3,16 +3,61 @@ from pathlib import Path
 
 from transportstreamarchiver.ffmpeg.execution import execute_ffmpeg
 from transportstreamarchiver.ffmpeg.seek_range import SeekRange
+from transportstreamarchiver.ffprobe.metadata import get_dict_stream
 
 __all__ = ["cut", "compress", "export_subtitle", "import_subtitle"]
 
 logger = getLogger(__name__)
 
 
+class ParameterBuilder:
+    def __init__(self) -> None:
+        self.parameters_map: list[str] = []
+        self.parameters_create_stream: list[str] = []
+        self.parameters_map_metadata: list[str] = []
+        self.parameters_metadata: list[str] = []
+
+    def build(self, file_input: Path) -> None:
+        dict_stream = get_dict_stream(file_input)
+        list_processed_program_id = []
+        output_stream_index = 0
+        for index, stream in dict_stream.items():
+            if not stream.program:
+                self.parameters_map.extend(["-map", f"0:{index}"])
+                self.parameters_map_metadata.extend([f"-map_metadata:s:{output_stream_index}", f"0:s:{index}"])
+                output_stream_index += 1
+                continue
+            program = stream.program
+            if program.id in list_processed_program_id:
+                continue
+            list_processed_program_id.append(program.id)
+            self.parameters_map.extend(["-map", f"p:{program.id}?"])
+            list_argument_stream = []
+            for stream_index in program.stream_indices:
+                self.parameters_map_metadata.extend([f"-map_metadata:s:{output_stream_index}", f"0:s:{stream_index}"])
+                output_stream_index += 1
+                list_argument_stream.append(f"st={stream_index}")
+
+            argument_stream = ":".join(f"st={stream_id}" for stream_id in program.stream_indices)
+            self.parameters_create_stream.extend(["-program", f"program_num={program.id}:{argument_stream}"])
+            if not program.tags:
+                continue
+            for key, value in program.tags.items():
+                self.parameters_metadata.extend(["-metadata:p", f"{key}={value}"])
+        print(f"""
+map = {self.parameters_map}
+create_stream = {self.parameters_create_stream}
+metadata = {self.parameters_metadata}
+""")
+
+
 def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> None:
     if not file_input.exists():
         msg = f"{file_input} does not exist"
         raise FileNotFoundError(msg)
+    # To prevent to FFmpeg overwrite some metadata.
+    parameter_builder = ParameterBuilder()
+    parameter_builder.build(file_input)
     parameters = []
     if ffmpeg_seek_range.ss is not None:
         parameters.extend(["-ss", f"{ffmpeg_seek_range.ss}"])
@@ -37,19 +82,30 @@ def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> No
             "-i",
             str(file_input),
             # In default, only one stream is selected for each type and the rest of the streams are removed.
-            "-map",
-            "0",
+            *parameter_builder.parameters_map,
             # In case when recorded video around the time when switch audio track
             # from single audio track to the one with sub audio,
             # the audio track may be handled as invalid track.
             # To remove useless track, set the following option:
             # "-map",
             # "-0:a:1",  # noqa: ERA001
+            *parameter_builder.parameters_create_stream,
             "-c",
             "copy",
+            # To copy data stream that FFmpeg doesn't recognize:
+            # - Answer: ffmpeg: Extract unknown data stream from video container - Stack Overflow
+            #   https://stackoverflow.com/a/63053691/12721873
+            "-copy_unknown",
             # To fix gap between video and audio track if they are not synchronized.
             "-async",
             "1",
+            # To copy also metadata (this is not reliable):
+            # - Retrieving and Saving media metadata using FFmpeg - Stack Overflow
+            #   https://stackoverflow.com/questions/9464617/retrieving-and-saving-media-metadata-using-ffmpeg
+            *parameter_builder.parameters_map_metadata,
+            "-movflags",
+            "use_metadata_tags",
+            *parameter_builder.parameters_metadata,
             # (Just in case) To prepare in case when need to use experimental features
             "-strict",
             "experimental",
@@ -59,7 +115,6 @@ def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> No
             "-y",
             "-loglevel",
             "verbose",
-            str(file_output),
             # The option `-copyts` is not used intentionally since `-copyts` has side effect
             # to
             # - ffmpeg Documentation
@@ -72,6 +127,7 @@ def cut(file_input: Path, ffmpeg_seek_range: SeekRange, file_output: Path) -> No
             # > by the corresponding delta value.
         ],
     )
+    parameters.append(str(file_output))
     execute_ffmpeg(parameters, "Failed to cut", file_output)
 
 

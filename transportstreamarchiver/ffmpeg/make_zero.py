@@ -25,6 +25,8 @@ def make_zero(file_input: Path, seek_range: SeekRange) -> Path:
         file_input (Path): Path to the input video file.
     """
     file_make_zero = file_input.parent / Path(f"{file_input.stem}_make_zero.ts")
+    if file_make_zero.exists():
+        return file_make_zero
     parameters = []
     if seek_range.ss is not None:
         parameters.extend(["-ss", f"{seek_range.ss}"])
