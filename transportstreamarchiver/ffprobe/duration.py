@@ -11,7 +11,7 @@ def get_duration(file_make_zero: Path) -> float:
     args = [
         "-show_entries",
         "format=duration",
-        "-of",
+        "-output_format",
         "default=noprint_wrappers=1:nokey=1",
         "-loglevel",
         "repeat+fatal",
