@@ -80,7 +80,7 @@ class Frames:
     # The gap between the FFprobe's PTS_TIME and FFmpeg's -ss option position.
     # Because, FFmpeg would take the key frame before the end of the scene.
     # Following value is based on experience in research with actual video.
-    INDEX_GAP_BETWEEN_FFPROBE_AND_FFMPEG = 2
+    INDEX_GAP_BETWEEN_FFPROBE_AND_FFMPEG = 3
 
     def __init__(self, file_make_zero: Path) -> None:
         self.file_make_zero = file_make_zero
@@ -129,3 +129,4 @@ if __name__ == "__main__":
         cut(file_input, seek_range, file_output)
         ffprobe.is_cut_by_key_frame_at_start(file_output)
         ffprobe.is_cut_by_key_frame_at_end(file_output)
+        ffprobe.is_preserving_metadata(file_input, file_output)
